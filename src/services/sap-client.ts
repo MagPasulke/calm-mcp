@@ -3,6 +3,8 @@ import { Logger } from '../utils/logger.js';
 import { executeHttpRequest } from '@sap-cloud-sdk/http-client'
 import { LandscapeQueryParams } from '../types/sap-types.js';
 
+import { AuthService } from './auth-service.js';
+
 /**
  * SAP Client for BTP MCP Server Dedicated
  * 
@@ -17,7 +19,8 @@ export class SAPClient {
 
     constructor(
         private readonly destinationService: DestinationService,
-        private readonly logger: Logger
+        private readonly logger: Logger,
+        private readonly authService: AuthService
     ) { }
 
     /**
@@ -78,9 +81,22 @@ export class SAPClient {
     }
 
     async getLandscapeInfo(params?: LandscapeQueryParams): Promise<string> {
+
+        // Get SecurityContext from token
+        if (!this.currentUserToken) {
+            throw new Error('No user token set');
+        }
+        const securityContext = await this.authService.validateToken(this.currentUserToken);
+
+        const requiredScope = 'mcp-server-calm.read';
+        if (!this.authService.hasScope(securityContext, requiredScope)) {
+            this.logger.warn(`User token missing required scope: ${requiredScope}`);
+            throw new Error('Forbidden: missing required scope');
+        }
+
         let destination;
         try {
-        destination = await this.destinationService.getDestination(this.currentUserToken);
+            destination = await this.destinationService.getDestination(this.currentUserToken);
         }
         catch (error) {
             this.logger.error('Error fetching destination for landscape info:', error);
