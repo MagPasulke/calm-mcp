@@ -1,0 +1,167 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SAPClient } from "../services/sap-client.js";
+import { Logger } from "../utils/logger.js";
+import { z } from "zod";
+
+/**
+ * Tool Registry for BTP MCP Server Dedicated
+ * 
+ * This registry manages the MCP tools that are exposed to AI assistants.
+ * It provides a structured way to register tools that interact with SAP services.
+ * 
+ * Developers should add their own tool registration methods to expose
+ * SAP OData operations as MCP tools.
+ */
+export class ToolRegistry {
+    private userToken?: string;
+
+    constructor(
+        private readonly mcpServer: McpServer,
+        private readonly sapClient: SAPClient,
+        private readonly logger: Logger
+    ) {}
+
+    /**
+     * Set the user's JWT token for authenticated operations
+     */
+    setUserToken(token?: string): void {
+        this.userToken = token;
+        this.sapClient.setUserToken(token);
+        this.logger.debug(`User token ${token ? 'set' : 'cleared'} for tool registry`);
+    }
+
+    /**
+     * Register all MCP tools
+     * Call this during server initialization
+     */
+    async registerTools(): Promise<void> {
+        this.logger.info('🔧 Registering MCP tools...');
+
+        // Register the hello-world sample tool
+        //this.registerHelloWorldTool();
+
+        // Register the landscape tool
+        this.registerLandscapeTool();
+
+        this.logger.info('✅ MCP tools registered successfully');
+    }
+
+    /**
+     * Hello World Tool - Sample implementation showing the MCP tool pattern
+     * 
+     * This tool demonstrates how to:
+     * - Register a tool with the MCP server
+     * - Define input schema using Zod
+     * - Call SAP client methods
+     * - Return properly formatted responses
+     */
+    private registerHelloWorldTool(): void {
+        this.mcpServer.registerTool(
+            "hello-world",
+            {
+                title: "Hello World",
+                description: "A sample tool that demonstrates the MCP tool pattern. Returns a greeting message with a timestamp. Use this as a template for implementing your own SAP integration tools.",
+                inputSchema: {
+                    name: z.string().describe("The name to greet")
+                }
+            },
+            async (args: Record<string, unknown>) => {
+                const name = args.name as string;
+                
+                try {
+                    const result = await this.sapClient.helloWorld(name);
+                    
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify(result, null, 2)
+                        }]
+                    };
+                } catch (error) {
+                    this.logger.error('Hello World tool error:', error);
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify({
+                                error: 'Failed to execute hello-world',
+                                message: error instanceof Error ? error.message : 'Unknown error'
+                            }, null, 2)
+                        }],
+                        isError: true
+                    };
+                }
+            }
+        );
+
+        this.logger.debug('Registered tool: hello-world');
+    }
+
+    /**
+     * Landscape Tool - Retrieves landscape objects from SAP Cloud ALM
+     *
+     * Registers a tool that queries the landscapeObjects API with optional
+     * filter parameters. All parameters are optional and only included
+     * in the request when provided.
+     */
+    private registerLandscapeTool(): void {
+        this.mcpServer.registerTool(
+            "get-landscape-info",
+            {
+                title: "Get Landscape Info",
+                description: "Retrieves landscape objects from SAP Cloud ALM. All filter parameters are optional. Returns a list of landscape objects matching the given criteria.",
+                inputSchema: {
+                    name: z.string().optional().describe("Filter by landscape object name, equals SID"),
+                    systemNumber: z.string().optional().describe("Filter by system number"),
+                    objectType: z.string().optional().describe("Filter by object type (e.g. CloudService)"),
+                    source: z.string().optional().describe("Filter by source (e.g. IMPORTED)"),
+                    lmsId: z.string().optional().describe("Filter by LMS ID"),
+                    serviceType: z.string().optional().describe("Filter by service type (e.g. SCP_HCAAS_DATALAKE)"),
+                    role: z.string().optional().describe("Filter by role (e.g. PROD)"),
+                    externalId: z.string().optional().describe("Filter by external ID"),
+                    limit: z.number().optional().describe("Maximum number of results to return"),
+                    offset: z.number().optional().describe("Offset for pagination"),
+                    deploymentModel: z.string().optional().describe("Filter by deployment model (e.g. BTP System)")
+                }
+            },
+            async (args: Record<string, unknown>) => {
+                try {
+                    const result = await this.sapClient.getLandscapeInfo({
+                        name: args.name as string | undefined,
+                        systemNumber: args.systemNumber as string | undefined,
+                        objectType: args.objectType as string | undefined,
+                        source: args.source as string | undefined,
+                        lmsId: args.lmsId as string | undefined,
+                        serviceType: args.serviceType as string | undefined,
+                        role: args.role as string | undefined,
+                        externalId: args.externalId as string | undefined,
+                        limit: args.limit as number | undefined,
+                        offset: args.offset as number | undefined,
+                        deploymentModel: args.deploymentModel as string | undefined
+                    });
+
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify(result, null, 2)
+                        }]
+                    };
+                } catch (error) {
+                    this.logger.error('Get Landscape Info tool error:', error);
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify({
+                                error: 'Failed to execute get-landscape-info',
+                                message: error instanceof Error ? error.message : 'Unknown error'
+                            }, null, 2)
+                        }],
+                        isError: true
+                    };
+                }
+            }
+        );
+
+        this.logger.debug('Registered tool: get-landscape-info');
+    }
+
+}

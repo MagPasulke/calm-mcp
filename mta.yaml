@@ -1,0 +1,71 @@
+_schema-version: "3.3.0"
+ID: btp-mcp-server-calm ##TODO: Change to your desired MTA ID
+version: 1.0.0
+description: MCP Server for SAP CALM API
+
+parameters:
+  enable-parallel-deployments: true
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm i
+
+modules:
+  - name: mcp-server
+    type: nodejs
+    path: .
+    parameters:
+      app-name: mcp-server-calm-${space}
+      memory: 512M
+      disk-quota: 1G
+      buildpack: nodejs_buildpack
+      command: npm run start
+      health-check-type: http
+      health-check-http-endpoint: /health
+      timeout: 180
+    properties:
+      LOG_LEVEL: error
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+    provides:
+      - name: mcp-server-api
+        properties:
+          url: ${default-url}
+    requires:
+      - name: destinationcalm
+      - name: mcp-connectivity
+      - name: mcp-xsuaa
+
+resources:
+  # Destination Service -> ##TODO: Change to your existing destination service instance name
+  - name: destinationcalm
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service: destination
+      service-name: destinationcalm
+      service-plan: lite
+
+  # Connectivity Service
+  - name: mcp-connectivity
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service-name: mcp-connectivity-${space}
+      service: connectivity
+      service-plan: lite
+
+  # XSUAA Service
+  - name: mcp-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service-name: mcpcalm-xsuaa-${space}
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: btp-mcp-server-calm-${space}
+        tenant-mode: dedicated

@@ -1,0 +1,53 @@
+{
+  "xsappname": "btp-mcp-server-dedicated",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.read",
+      "description": "Read access to SAP services"
+    },
+    {
+      "name": "$XSAPPNAME.write",
+      "description": "Write access to SAP services"
+    },
+    {
+      "name": "$XSAPPNAME.admin",
+      "description": "Admin access to MCP server configuration"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "MCPViewer",
+      "description": "Read-only access to MCP server",
+      "scope-references": [
+        "$XSAPPNAME.read"
+      ]
+    },
+    {
+      "name": "MCPEditor",
+      "description": "Read and write access to MCP server",
+      "scope-references": [
+        "$XSAPPNAME.read",
+        "$XSAPPNAME.write"
+      ]
+    },
+    {
+      "name": "MCPAdmin",
+      "description": "Full admin access to MCP server",
+      "scope-references": [
+        "$XSAPPNAME.read",
+        "$XSAPPNAME.write",
+        "$XSAPPNAME.admin"
+      ]
+    }
+  ],
+  "oauth2-configuration": {
+    "redirect-uris": [ 
+      "https://pag*.cfapps.*.hana.ondemand.com/**",
+      "http://localhost:33418/**",
+      "https://vscode.dev/redirect"
+    ],
+    "token-validity": 3600,
+    "refresh-token-validity": 86400
+  }
+}
