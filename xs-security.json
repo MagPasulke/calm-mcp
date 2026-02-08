@@ -1,5 +1,5 @@
 {
-  "xsappname": "btp-mcp-server-dedicated",
+  "xsappname": "mcp-server-calm",
   "tenant-mode": "dedicated",
   "scopes": [
     {
