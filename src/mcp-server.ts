@@ -8,6 +8,7 @@ import { SAPClient } from './services/sap-client.js';
 import { Logger } from './utils/logger.js';
 import { Config } from './utils/config.js';
 import { ErrorHandler } from './utils/error-handler.js';
+import { AuthService } from './services/auth-service.js';
 
 /**
  * MCP Server for SAP BTP Dedicated
@@ -23,15 +24,17 @@ export class MCPServer {
     private readonly mcpServer: McpServer;
     private readonly toolRegistry: ToolRegistry;
     private userToken?: string;
+    private readonly authService: AuthService;
 
     constructor() {
         this.logger = new Logger('mcp-server');
         this.config = new Config();
         this.destinationService = new DestinationService(this.logger, this.config);
-        this.sapClient = new SAPClient(this.destinationService, this.logger);
+        this.authService = new AuthService(this.logger, this.config);
+        this.sapClient = new SAPClient(this.destinationService, this.logger, this.authService);
         
         this.mcpServer = new McpServer({
-            name: "btp-mcp-server-dedicated",
+            name: "btp-mcp-server-calm",
             version: "1.0.0"
         });
         
@@ -71,38 +74,6 @@ export class MCPServer {
             throw error;
         }
     }
-
-    //TODO: delete unused code or implement transport if needed
-    /**
-     * Create an HTTP transport for MCP communication
-     */
-/*     createHTTPTransport(options?: {
-        sessionId?: string;
-        enableDnsRebindingProtection?: boolean;
-        allowedHosts?: string[];
-    }): StreamableHTTPServerTransport {
-        const sessionId = options?.sessionId || randomUUID();
-        const allowedOrigins = this.config.get<string[]>('cors.allowedOrigins', ['http://localhost:3000']);
-        
-        // Extract hosts from allowed origins
-        const allowedHosts = options?.allowedHosts || [
-            '127.0.0.1',
-            'localhost',
-            ...allowedOrigins.map(origin => {
-                try {
-                    return new URL(origin).hostname;
-                } catch {
-                    return origin;
-                }
-            })
-        ];
-
-        return new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => sessionId,
-            enableDnsRebindingProtection: options?.enableDnsRebindingProtection ?? true,
-            allowedHosts
-        });
-    } */
 
     /**
      * Get the underlying McpServer instance

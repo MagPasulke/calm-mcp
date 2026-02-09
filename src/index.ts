@@ -313,13 +313,12 @@ export function createApp(): express.Application {
                     'static'
                 ],
 
-                // Supported scopes (XSUAA + application scopes)
+                // Supported scopes - only advertise openid and app-specific scopes
+                // Note: Do not advertise profile, email, uaa.user, uaa.resource
+                // as Custom IAS IdPs may not support them, causing XSUAA to
+                // reject the entire scope request and fall back to openid only.
                 scopes_supported: [
                     'openid',
-                    'profile',
-                    'email',
-                    'uaa.user',
-                    'uaa.resource',
                     ...appScopes
                 ],
 
@@ -338,7 +337,7 @@ export function createApp(): express.Application {
 
                 // MCP-specific extensions
                 'x-mcp-server': {
-                    name: 'btp-mcp-server-dedicated',
+                    name: 'btp-mcp-server-calm',
                     version: '1.0.0',
                     mcp_endpoint: `${baseUrl}/mcp`,
                     authentication_required: true,
@@ -430,7 +429,7 @@ export function createApp(): express.Application {
 
                 // MCP-specific metadata
                 'x-mcp-integration': {
-                    server_name: 'btp-mcp-server-dedicated',
+                    server_name: 'btp-mcp-server-calm',
                     mcp_endpoint: `${baseUrl}/mcp`,
                     authentication_flow: 'authorization_code',
                     supports_refresh: true
@@ -472,7 +471,7 @@ export function createApp(): express.Application {
                 registration_endpoint_auth_methods_supported: ['none'],
                 static_client_available: true,
                 'x-mcp-integration': {
-                    server_name: 'btp-mcp-server-dedicated',
+                    server_name: 'btp-mcp-server-calm',
                     mcp_endpoint: `${baseUrl}/mcp`,
                     authentication_required: true,
                     static_client_supported: true
@@ -506,7 +505,8 @@ export function createApp(): express.Application {
             const state = req.query.state as string || randomUUID();
             const baseUrl = getBaseUrl(req);
             const mcpRedirectUri = req.query.redirect_uri as string;
-            const authUrl = authService.getAuthorizationUrl(state, baseUrl);
+            const mcpScope = req.query.scope as string;
+            const authUrl = authService.getAuthorizationUrl(state, baseUrl, mcpScope);
             const mcpCodeChallenge = req.query.code_challenge as string;
             const mcpCodeChallengeMethod = req.query.code_challenge_method as string;
 
@@ -537,6 +537,7 @@ export function createApp(): express.Application {
             }
 
             logger.info(`MCP OAuth proxy initiated for redirect: ${mcpRedirectUri}`);
+            logger.info(`Redirecting to XSUAA authUrl: ${authUrl}`);
             res.redirect(authUrl);
         } catch (error) {
             logger.error('Failed to initiate OAuth flow:', error);

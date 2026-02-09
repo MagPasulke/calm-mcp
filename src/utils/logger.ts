@@ -13,7 +13,7 @@ export class Logger {
             ),
             defaultMeta: {
                 component: this.component,
-                service: 'btp-mcp-server-dedicated'
+                service: 'btp-mcp-server-calm'
             },
             transports: [
                 new winston.transports.Console()

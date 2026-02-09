@@ -26,7 +26,7 @@ modules:
       health-check-http-endpoint: /health
       timeout: 180
     properties:
-      LOG_LEVEL: error
+      LOG_LEVEL: debug
     build-parameters:
       builder: custom
       commands:
