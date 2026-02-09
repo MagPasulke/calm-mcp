@@ -29,3 +29,6 @@ coverage/
 
 # Temporary files
 tmp/
+
+# added by cds
+.cdsrc-private.json
