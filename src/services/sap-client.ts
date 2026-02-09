@@ -91,19 +91,19 @@ export class SAPClient {
         // Debug: log token claims
         try {
             const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
-            this.logger.info(`Token scopes: ${JSON.stringify(payload.scope)}`);
-            this.logger.info(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
-            this.logger.info(`Token origin: ${payload.origin}`);
-            this.logger.info(`Token grant_type: ${payload.grant_type}`);
+            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
+            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
+            this.logger.debug(`Token origin: ${payload.origin}`);
+            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
         } catch (e) {
-            this.logger.info('Could not decode token');
+            this.logger.debug('Could not decode token');
+            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
         }
 
         const hasLocalScope = securityContext.checkLocalScope('read');
-        this.logger.info(`checkLocalScope('read') = ${hasLocalScope}`);
+        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
 
         if (!hasLocalScope) {
-            this.logger.error('User token missing required scope: read');
             throw new Error('Forbidden: missing required scope');
         }
 
@@ -112,12 +112,11 @@ export class SAPClient {
             destination = await this.destinationService.getDestination(this.currentUserToken);
         }
         catch (error) {
-            this.logger.error('Error fetching destination for landscape info:', error);
+            this.logger.debug('Error fetching destination for landscape info:', error);
             throw new Error('Failed to get destination for landscape info');
         }
 
-        this.logger.info(`Fetching landscape details`);
-
+        this.logger.debug(`Fetching landscape details`);
         const queryParams = this.buildQueryString(params);
 
         const response = await executeHttpRequest(
@@ -125,6 +124,49 @@ export class SAPClient {
             {
                 method: 'get',
                 url: `/landscapeObjects${queryParams}`
+            }
+        );
+
+        return response.data;
+    }
+
+    async getLandscapeProperties(lmsId: string): Promise<string> {
+        if (!this.currentUserToken) {
+            throw new Error('No user token set');
+        }
+
+        if (!lmsId || lmsId.trim() === '') {
+            throw new Error('No Landscape ID provided');
+        }
+
+        const securityContext = await this.authService.validateToken(this.currentUserToken);
+
+        // Debug: log token claims
+        try {
+            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
+            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
+            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
+            this.logger.debug(`Token origin: ${payload.origin}`);
+            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
+        } catch (e) {
+            this.logger.debug('Could not decode token');
+            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
+        const hasLocalScope = securityContext.checkLocalScope('read');
+        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
+
+        if (!hasLocalScope) {
+            throw new Error('Forbidden: missing required scope');
+        }
+
+        const destination = await this.destinationService.getDestination(this.currentUserToken);
+
+        const response = await executeHttpRequest(
+            destination,
+            {
+                method: 'get',
+                url: `/properties?lmsId=${encodeURIComponent(lmsId)}`
             }
         );
 

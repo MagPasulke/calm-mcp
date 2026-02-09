@@ -37,11 +37,11 @@ export class ToolRegistry {
     async registerTools(): Promise<void> {
         this.logger.info('🔧 Registering MCP tools...');
 
-        // Register the hello-world sample tool
-        //this.registerHelloWorldTool();
-
         // Register the landscape tool
         this.registerLandscapeTool();
+
+        // Register the landscape property tool
+        this.registerLandscapePropertyTool();
 
         this.logger.info('✅ MCP tools registered successfully');
     }
@@ -162,6 +162,51 @@ export class ToolRegistry {
         );
 
         this.logger.debug('Registered tool: get-landscape-info');
+    }
+
+        /**
+     * Landscape Property Tool - Retrieves Landscape Properties from SAP Cloud ALM for a single Ladndscape ID
+     *
+     * Registers a tool that queries the Properties API with mandatory
+     * landscape ID parameter. 
+     */
+    private registerLandscapePropertyTool(): void {
+        this.mcpServer.registerTool(
+            "get-landscape-property-info",
+            {
+                title: "Get Landscape Property Info",
+                description: "Retrieves landscape properties from SAP Cloud ALM for a single landscape ID.",
+                inputSchema: {
+                    lmsId: z.string().describe("Landscape ID"),
+                }
+            },
+            async (args: Record<string, unknown>) => {
+                try {
+                    const result = await this.sapClient.getLandscapeProperties(args.lmsId as string);
+
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify(result, null, 2)
+                        }]
+                    };
+                } catch (error) {
+                    this.logger.error('Get Landscape Property tool error:', error);
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify({
+                                error: 'Failed to execute get-landscape-property-info',
+                                message: error instanceof Error ? error.message : 'Unknown error'
+                            }, null, 2)
+                        }],
+                        isError: true
+                    };
+                }
+            }
+        );
+
+        this.logger.debug('Registered tool: get-landscape-property-info');
     }
 
 }
