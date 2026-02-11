@@ -1,3 +1,3 @@
 Community Version of a SAP CLOUD ALM MCP Server for BTP CF Env.
 
-Currently supports landscape API 
+Currently supports landscape API, properties API, Status Events API
