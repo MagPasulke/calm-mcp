@@ -355,7 +355,7 @@ export function createApp(): express.Application {
                 }
             };
 
-            res.setHeader('Access-Control-Allow-Origin', '*'); //TODO: restrict allowed origins if needed
+            res.setHeader('Access-Control-Allow-Origin', '*'); //TODO: restrict allowed origins if needed, e.g. when using browser-based MCP Clients
             res.setHeader('Cache-Control', 'public, max-age=3600');
             res.json(discoveryMetadata);
         } catch (error) {
