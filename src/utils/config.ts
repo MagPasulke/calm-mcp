@@ -24,7 +24,7 @@ export class Config {
 
     private loadConfiguration(): void {
         // SAP Destination Configuration
-        this.config.set('calm.destinationName', process.env.CALM_DESTINATION_NAME || 'SAP_SYSTEM');
+        this.config.set('calm.destinationName', process.env.CALM_DESTINATION_NAME || 'CALM');
 
         // Server Configuration
         this.config.set('server.port', Number.parseInt(process.env.PORT || '3000'));

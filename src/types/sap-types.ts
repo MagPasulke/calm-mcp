@@ -5,38 +5,6 @@
  */
 
 /**
- * Configuration for SAP destination
- */
-export interface DestinationConfig {
-    name: string;
-    url?: string;
-    authentication?: string;
-}
-
-/**
- * Generic SAP API response wrapper
- * Extend this for your specific OData responses
- */
-export interface SAPResponse<T = unknown> {
-    data: T;
-    status: number;
-    headers?: Record<string, string>;
-}
-
-/**
- * Generic SAP API error structure
- */
-export interface SAPError {
-    code: string;
-    message: string;
-    details?: Array<{
-        code: string;
-        message: string;
-        target?: string;
-    }>;
-}
-
-/**
  * Query parameters for the landscapeObjects API endpoint.
  * All parameters are optional.
  */
