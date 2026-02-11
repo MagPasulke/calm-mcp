@@ -53,7 +53,7 @@ export class DestinationService {
      * @returns The resolved HttpDestination
      */
     async getDestination(jwtToken?: string): Promise<HttpDestination> {
-        const destinationName = this.config.get('calm.destinationName', 'SAP_SYSTEM');
+        const destinationName = this.config.get('calm.destinationName', 'CALM');
 
         this.logger.debug(`Fetching destination: ${destinationName} ${jwtToken ? 'with JWT' : 'without JWT'}`);
 

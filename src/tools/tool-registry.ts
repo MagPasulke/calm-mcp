@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SAPClient } from "../services/sap-client.js";
 import { Logger } from "../utils/logger.js";
+import { TypeEnum, EventTypeEnum } from "../types/sap-types.js";
 import { z } from "zod";
 
 /**
@@ -37,65 +38,18 @@ export class ToolRegistry {
     async registerTools(): Promise<void> {
         this.logger.info('🔧 Registering MCP tools...');
 
-        // Register the hello-world sample tool
-        //this.registerHelloWorldTool();
-
         // Register the landscape tool
         this.registerLandscapeTool();
 
+        // Register the landscape property tool
+        this.registerLandscapePropertyTool();
+
+        // Register the status events tool
+        this.registerStatusEventsTool();
+
         this.logger.info('✅ MCP tools registered successfully');
     }
-
-    /**
-     * Hello World Tool - Sample implementation showing the MCP tool pattern
-     * 
-     * This tool demonstrates how to:
-     * - Register a tool with the MCP server
-     * - Define input schema using Zod
-     * - Call SAP client methods
-     * - Return properly formatted responses
-     */
-    private registerHelloWorldTool(): void {
-        this.mcpServer.registerTool(
-            "hello-world",
-            {
-                title: "Hello World",
-                description: "A sample tool that demonstrates the MCP tool pattern. Returns a greeting message with a timestamp. Use this as a template for implementing your own SAP integration tools.",
-                inputSchema: {
-                    name: z.string().describe("The name to greet")
-                }
-            },
-            async (args: Record<string, unknown>) => {
-                const name = args.name as string;
-                
-                try {
-                    const result = await this.sapClient.helloWorld(name);
-                    
-                    return {
-                        content: [{
-                            type: "text" as const,
-                            text: JSON.stringify(result, null, 2)
-                        }]
-                    };
-                } catch (error) {
-                    this.logger.error('Hello World tool error:', error);
-                    return {
-                        content: [{
-                            type: "text" as const,
-                            text: JSON.stringify({
-                                error: 'Failed to execute hello-world',
-                                message: error instanceof Error ? error.message : 'Unknown error'
-                            }, null, 2)
-                        }],
-                        isError: true
-                    };
-                }
-            }
-        );
-
-        this.logger.debug('Registered tool: hello-world');
-    }
-
+    
     /**
      * Landscape Tool - Retrieves landscape objects from SAP Cloud ALM
      *
@@ -162,6 +116,115 @@ export class ToolRegistry {
         );
 
         this.logger.debug('Registered tool: get-landscape-info');
+    }
+
+        /**
+     * Landscape Property Tool - Retrieves Landscape Properties from SAP Cloud ALM for a single Ladndscape ID
+     *
+     * Registers a tool that queries the Properties API with mandatory
+     * landscape ID parameter. 
+     */
+    private registerLandscapePropertyTool(): void {
+        this.mcpServer.registerTool(
+            "get-landscape-property-info",
+            {
+                title: "Get Landscape Property Info",
+                description: "Retrieves landscape properties from SAP Cloud ALM for a single landscape ID.",
+                inputSchema: {
+                    lmsId: z.string().describe("Landscape ID"),
+                }
+            },
+            async (args: Record<string, unknown>) => {
+                try {
+                    const result = await this.sapClient.getLandscapeProperties(args.lmsId as string);
+
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify(result, null, 2)
+                        }]
+                    };
+                } catch (error) {
+                    this.logger.error('Get Landscape Property tool error:', error);
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify({
+                                error: 'Failed to execute get-landscape-property-info',
+                                message: error instanceof Error ? error.message : 'Unknown error'
+                            }, null, 2)
+                        }],
+                        isError: true
+                    };
+                }
+            }
+        );
+
+        this.logger.debug('Registered tool: get-landscape-property-info');
+    }
+
+    /**
+     * Status Events Tool - Retrieves status events from SAP Cloud ALM
+     *
+     * Registers a tool that queries the Status Events API with optional
+     * filter parameters. All parameters are optional and only included
+     * in the request when provided.
+     */
+    private registerStatusEventsTool(): void {
+        this.mcpServer.registerTool(
+            "get-status-events",
+            {
+                title: "Get Status Events",
+                description: "Retrieves status events from SAP Cloud ALM. All filter parameters are optional. Returns a list of status events matching the given criteria.",
+                inputSchema: {
+                    type: z.enum(["BusinessService", "CloudService", "TechnicalSystem"]).optional().describe("Filter by type"),
+                    serviceName: z.string().optional().describe("Filter by service name"),
+                    eventType: z.enum(["Maintenance", "Degradation", "Disruption", "Communication", "Planned Availability"]).optional().describe("Filter by event type"),
+                    serviceType: z.string().optional().describe("Filter by service type"),
+                    period: z.string().optional().describe("Filter by period"),
+                    startTime: z.string().optional().describe("Filter by start time"),
+                    endTime: z.string().optional().describe("Filter by end time"),
+                    limit: z.number().optional().describe("Maximum number of results to return"),
+                    offset: z.number().optional().describe("Offset for pagination")
+                }
+            },
+            async (args: Record<string, unknown>) => {
+                try {
+                    const result = await this.sapClient.getStatusEvents({
+                        type: args.type as TypeEnum | undefined,
+                        serviceName: args.serviceName as string | undefined,
+                        eventType: args.eventType as EventTypeEnum | undefined,
+                        serviceType: args.serviceType as string | undefined,
+                        period: args.period as string | undefined,
+                        startTime: args.startTime as string | undefined,
+                        endTime: args.endTime as string | undefined,
+                        limit: args.limit as number | undefined,
+                        offset: args.offset as number | undefined
+                    });
+
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify(result, null, 2)
+                        }]
+                    };
+                } catch (error) {
+                    this.logger.error('Get Status Events tool error:', error);
+                    return {
+                        content: [{
+                            type: "text" as const,
+                            text: JSON.stringify({
+                                error: 'Failed to execute get-status-events',
+                                message: error instanceof Error ? error.message : 'Unknown error'
+                            }, null, 2)
+                        }],
+                        isError: true
+                    };
+                }
+            }
+        );
+
+        this.logger.debug('Registered tool: get-status-events');
     }
 
 }

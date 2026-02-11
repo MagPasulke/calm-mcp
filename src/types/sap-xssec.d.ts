@@ -7,7 +7,6 @@ declare module '@sap/xssec' {
         getSubdomain(): string;
         getClientId(): string;
         getExpirationDate(): Date;
-        getGrantedScopes(): string[];
         checkScope(scope: string): boolean;
         checkLocalScope(scope: string): boolean;
         getToken(): string;

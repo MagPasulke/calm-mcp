@@ -1,7 +1,7 @@
 import { Logger } from './logger.js';
 
 export class ErrorHandler {
-    private static logger = new Logger('ErrorHandler');
+    private static readonly logger = new Logger('error-handler-calm');
 
     static handle(error: unknown): void {
         let errObj: { message?: string; stack?: string; code?: string; statusCode?: number } = {};

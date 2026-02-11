@@ -41,16 +41,29 @@ export class AuthService {
     /**
      * Generate OAuth authorization URL for user login
      */
-    getAuthorizationUrl(state?: string, requestUrl?: string): string {
+    getAuthorizationUrl(state?: string, requestUrl?: string, scope?: string): string {
         if (!this.xsuaaCredentials) {
             throw new Error('XSUAA service not configured');
         }
 
         const creds = this.xsuaaCredentials as Record<string, string>;
+        const appName = creds.xsappname;
+
+        // Filter incoming scopes: only keep 'openid' and app-specific scopes
+        // XSUAA with Custom IAS rejects unknown scopes like 'email', 'profile', 'uaa.user', etc.
+        let filteredScope: string | undefined;
+        if (scope) {
+            const validScopes = scope.split(/[\s+]+/).filter(s =>
+                s === 'openid' || s.startsWith(`${appName}.`)
+            );
+            filteredScope = validScopes.length > 0 ? validScopes.join(' ') : undefined;
+        }
+
         const params = new URLSearchParams({
             response_type: 'code',
             client_id: creds.clientid,
             redirect_uri: this.getRedirectUri(requestUrl),
+            ...(filteredScope && { scope: filteredScope }),
             ...(state && { state })
         });
 
@@ -299,8 +312,7 @@ export class AuthService {
             username: securityContext.getUserName(),
             email: securityContext.getEmail(),
             givenName: securityContext.getGivenName(),
-            familyName: securityContext.getFamilyName(),
-            scopes: securityContext.getGrantedScopes()
+            familyName: securityContext.getFamilyName()
         };
     }
 
@@ -356,10 +368,9 @@ export class AuthService {
         }
 
         const appName = creds.xsappname;
+        // Only advertise scopes that are defined in xs-security.json
         return [
-            `${appName}.read`,
-            `${appName}.write`,
-            `${appName}.admin`
+            `${appName}.read`
         ];
     }
 

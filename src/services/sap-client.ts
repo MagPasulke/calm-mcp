@@ -1,29 +1,27 @@
 import { DestinationService } from './destination-service.js';
 import { Logger } from '../utils/logger.js';
 import { executeHttpRequest } from '@sap-cloud-sdk/http-client'
-import { LandscapeQueryParams } from '../types/sap-types.js';
+import { LandscapeQueryParams, StatusEventsQueryParams } from '../types/sap-types.js';
+
+import { AuthService } from './auth-service.js';
 
 /**
- * SAP Client for BTP MCP Server Dedicated
+ * SAP Client for BTP CALM MCP Server
  * 
- * This client provides methods for interacting with SAP OData services.
+ * This client provides methods for interacting with CALM APIs.
  * It handles user token management and provides access to the destination service.
- * 
- * Developers should extend this class with their own OData service methods
- * based on their specific integration requirements.
  */
 export class SAPClient {
     private currentUserToken?: string;
 
     constructor(
         private readonly destinationService: DestinationService,
-        private readonly logger: Logger
+        private readonly logger: Logger,
+        private readonly authService: AuthService
     ) { }
 
     /**
      * Set the user's JWT token for authenticated operations
-     * This token will be used for OAuth2SAMLBearer authentication
-     * when making requests to SAP systems.
      */
     setUserToken(token?: string): void {
         this.currentUserToken = token;
@@ -39,63 +37,148 @@ export class SAPClient {
 
     /**
      * Get the destination service instance
-     * Useful for developers who need direct access to destination resolution
      */
     getDestinationService(): DestinationService {
         return this.destinationService;
     }
 
-    /**
-     * Hello World method - demonstrates the pattern for implementing SAP service methods
-     * 
-     * This is a sample method that shows how to structure your OData service calls.
-     * Replace this with your actual SAP OData service methods.
-     * 
-     * @param name The name to greet
-     * @returns A greeting message
-     */
-    async helloWorld(name: string): Promise<{ message: string; timestamp: string }> {
-        this.logger.info(`Hello World called with name: ${name}`);
-
-        // In a real implementation, you would:
-        // 1. Get the destination
-        // const destination = await this.destinationService.getDestination(this.currentUserToken);
-        // 
-        // 2. Use @sap-cloud-sdk/http-client to make OData calls
-        // const response = await executeHttpRequest(destination, {
-        //     method: 'GET',
-        //     url: '/sap/opu/odata/sap/YOUR_SERVICE/EntitySet',
-        //     headers: { 'Accept': 'application/json' }
-        // });
-        //
-        // 3. Return typed response
-        // return response.data;
-
-        return {
-            message: `Hello, ${name}! This is your BTP MCP Server.`,
-            timestamp: new Date().toISOString()
-        };
-    }
-
     async getLandscapeInfo(params?: LandscapeQueryParams): Promise<string> {
+
+        // Get SecurityContext from token
+        if (!this.currentUserToken) {
+            throw new Error('No user token set');
+        }
+        const securityContext = await this.authService.validateToken(this.currentUserToken);
+
+        // Debug: log token claims
+        try {
+            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
+            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
+            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
+            this.logger.debug(`Token origin: ${payload.origin}`);
+            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
+        } catch (e) {
+            this.logger.debug('Could not decode token');
+            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
+        const hasLocalScope = securityContext.checkLocalScope('read');
+        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
+
+        if (!hasLocalScope) {
+            throw new Error('Forbidden: missing required scope \'read\'');
+        }
+
         let destination;
         try {
-        destination = await this.destinationService.getDestination(this.currentUserToken);
+            destination = await this.destinationService.getDestination(this.currentUserToken);
         }
         catch (error) {
-            this.logger.error('Error fetching destination for landscape info:', error);
+            this.logger.debug('Error fetching destination for landscape info:', error);
             throw new Error('Failed to get destination for landscape info');
         }
 
-        this.logger.info(`Fetching landscape details`);
-
+        this.logger.debug(`Fetching landscape details`);
         const queryParams = this.buildQueryString(params);
 
         const response = await executeHttpRequest(
             destination,
             {
                 method: 'get',
-                url: `/landscapeObjects${queryParams}`
+                url: `/calm-landscape/v1/landscapeObjects${queryParams}`
+            }
+        );
+
+        return response.data;
+    }
+
+    async getLandscapeProperties(lmsId: string): Promise<string> {
+        if (!this.currentUserToken) {
+            throw new Error('No user token set');
+        }
+
+        if (!lmsId || lmsId.trim() === '') {
+            throw new Error('No Landscape ID provided');
+        }
+
+        const securityContext = await this.authService.validateToken(this.currentUserToken);
+
+        // Debug: log token claims
+        try {
+            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
+            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
+            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
+            this.logger.debug(`Token origin: ${payload.origin}`);
+            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
+        } catch (e) {
+            this.logger.debug('Could not decode token');
+            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
+        const hasLocalScope = securityContext.checkLocalScope('read');
+        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
+
+        if (!hasLocalScope) {
+            throw new Error('Forbidden: missing required scope \'read\'');
+        }
+
+        const destination = await this.destinationService.getDestination(this.currentUserToken);
+
+        const response = await executeHttpRequest(
+            destination,
+            {
+                method: 'get',
+                url: `/calm-landscape/v1/properties?lmsId=${encodeURIComponent(lmsId)}`
+            }
+        );
+
+        return response.data;
+    }
+
+    async getStatusEvents(params?: StatusEventsQueryParams): Promise<string> {
+
+        // Get SecurityContext from token
+        if (!this.currentUserToken) {
+            throw new Error('No user token set');
+        }
+        const securityContext = await this.authService.validateToken(this.currentUserToken);
+
+        // Debug: log token claims
+        try {
+            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
+            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
+            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
+            this.logger.debug(`Token origin: ${payload.origin}`);
+            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
+        } catch (e) {
+            this.logger.debug('Could not decode token');
+            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
+        const hasLocalScope = securityContext.checkLocalScope('read');
+        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
+
+        if (!hasLocalScope) {
+            throw new Error('Forbidden: missing required scope \'read\'');
+        }
+
+        let destination;
+        try {
+            destination = await this.destinationService.getDestination(this.currentUserToken);
+        }
+        catch (error) {
+            this.logger.debug('Error fetching destination for landscape info:', error);
+            throw new Error('Failed to get destination for landscape info');
+        }
+
+        this.logger.debug(`Fetching landscape details`);
+        const queryParams = this.buildQueryString(params);
+
+        const response = await executeHttpRequest(
+            destination,
+            {
+                method: 'get',
+                url: `/bsm-service/v1/events${queryParams}`
             }
         );
 
@@ -109,7 +192,7 @@ export class SAPClient {
      * @param params - Optional key-value pairs to include as query parameters
      * @returns A query string prefixed with '?' or an empty string if no params are set
      */
-    private buildQueryString(params?: LandscapeQueryParams): string {
+    private buildQueryString(params?: LandscapeQueryParams | StatusEventsQueryParams): string {
         if (!params) {
             return '';
         }
