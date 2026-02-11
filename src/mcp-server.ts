@@ -1,7 +1,5 @@
 import { ToolRegistry } from './tools/tool-registry.js';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { randomUUID } from "node:crypto";
 import 'dotenv/config';
 import { DestinationService } from './services/destination-service.js';
 import { SAPClient } from './services/sap-client.js';
@@ -27,7 +25,7 @@ export class MCPServer {
     private readonly authService: AuthService;
 
     constructor() {
-        this.logger = new Logger('mcp-server');
+        this.logger = new Logger('mcp-server-calm');
         this.config = new Config();
         this.destinationService = new DestinationService(this.logger, this.config);
         this.authService = new AuthService(this.logger, this.config);
