@@ -35,7 +35,7 @@ xs-security.json                   # XSUAA security configuration
 | `get-landscape-property-info` | `/calm-landscape/v1/properties` | Get properties for a single landscape object by ID |
 | `get-status-events` | `/bsm-service/v1/events` | Query status events with optional filters (type, eventType, serviceName, period, etc.) |
 
-All tools require the `read` scope via the `CALMViewer` role collection.
+All tools require the `read` scope via the `CALMViewer` role.
 
 ## Destination Configuration
 
