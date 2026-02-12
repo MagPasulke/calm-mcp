@@ -54,13 +54,6 @@ The destination name used by the application is configured via the `CALM_DESTINA
 
 ## Deployment on BTP
 
-### Prerequisites
-
-- Cloud Foundry CLI with MTA plugin
-- An XSUAA service instance
-- A Destination service instance pointing to your SAP Cloud ALM tenant (configured via `CALM_DESTINATION_NAME` env var)
-- A Connectivity service instance
-
 ### Build and Deploy
 
 ```bash
