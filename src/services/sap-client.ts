@@ -43,31 +43,7 @@ export class SAPClient {
     }
 
     async getLandscapeInfo(params?: LandscapeQueryParams): Promise<string> {
-
-        // Get SecurityContext from token
-        if (!this.currentUserToken) {
-            throw new Error('No user token set');
-        }
-        const securityContext = await this.authService.validateToken(this.currentUserToken);
-
-        // Debug: log token claims
-        try {
-            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
-            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
-            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
-            this.logger.debug(`Token origin: ${payload.origin}`);
-            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
-        } catch (e) {
-            this.logger.debug('Could not decode token');
-            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
-        }
-
-        const hasLocalScope = securityContext.checkLocalScope('read');
-        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
-
-        if (!hasLocalScope) {
-            throw new Error('Forbidden: missing required scope \'read\'');
-        }
+        await this.ensureAuthorized('read');
 
         let destination;
         try {
@@ -93,34 +69,11 @@ export class SAPClient {
     }
 
     async getLandscapeProperties(lmsId: string): Promise<string> {
-        if (!this.currentUserToken) {
-            throw new Error('No user token set');
-        }
-
         if (!lmsId || lmsId.trim() === '') {
             throw new Error('No Landscape ID provided');
         }
 
-        const securityContext = await this.authService.validateToken(this.currentUserToken);
-
-        // Debug: log token claims
-        try {
-            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
-            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
-            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
-            this.logger.debug(`Token origin: ${payload.origin}`);
-            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
-        } catch (e) {
-            this.logger.debug('Could not decode token');
-            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
-        }
-
-        const hasLocalScope = securityContext.checkLocalScope('read');
-        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
-
-        if (!hasLocalScope) {
-            throw new Error('Forbidden: missing required scope \'read\'');
-        }
+        await this.ensureAuthorized('read');
 
         const destination = await this.destinationService.getDestination(this.currentUserToken);
 
@@ -136,31 +89,7 @@ export class SAPClient {
     }
 
     async getStatusEvents(params?: StatusEventsQueryParams): Promise<string> {
-
-        // Get SecurityContext from token
-        if (!this.currentUserToken) {
-            throw new Error('No user token set');
-        }
-        const securityContext = await this.authService.validateToken(this.currentUserToken);
-
-        // Debug: log token claims
-        try {
-            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
-            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
-            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
-            this.logger.debug(`Token origin: ${payload.origin}`);
-            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
-        } catch (e) {
-            this.logger.debug('Could not decode token');
-            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
-        }
-
-        const hasLocalScope = securityContext.checkLocalScope('read');
-        this.logger.debug(`checkLocalScope('read') = ${hasLocalScope}`);
-
-        if (!hasLocalScope) {
-            throw new Error('Forbidden: missing required scope \'read\'');
-        }
+        await this.ensureAuthorized('read');
 
         let destination;
         try {
@@ -202,5 +131,36 @@ export class SAPClient {
             .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
 
         return entries.length > 0 ? `?${entries.join('&')}` : '';
+    }
+
+        /**
+     * Validates the current user token and checks the required local scope.
+     * Throws if no token is set or the required scope is missing.
+     */
+    private async ensureAuthorized(scope: string): Promise<void> {
+        if (!this.currentUserToken) {
+            throw new Error('No user token set');
+        }
+
+        const securityContext = await this.authService.validateToken(this.currentUserToken);
+
+        // Debug: log token claims
+        try {
+            const payload = JSON.parse(Buffer.from(this.currentUserToken.split('.')[1], 'base64').toString());
+            this.logger.debug(`Token scopes: ${JSON.stringify(payload.scope)}`);
+            this.logger.debug(`Token role collections: ${JSON.stringify(payload['xs.rolecollections'])}`);
+            this.logger.debug(`Token origin: ${payload.origin}`);
+            this.logger.debug(`Token grant_type: ${payload.grant_type}`);
+        } catch (e) {
+            this.logger.debug('Could not decode token');
+            this.logger.debug(`e.message: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
+        const hasLocalScope = securityContext.checkLocalScope(scope);
+        this.logger.debug(`checkLocalScope('${scope}') = ${hasLocalScope}`);
+
+        if (!hasLocalScope) {
+            throw new Error(`Forbidden: missing required scope '${scope}'`);
+        }
     }
 }
