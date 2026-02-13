@@ -47,7 +47,6 @@ export class DestinationService {
      * Get the configured SAP destination
      * 
      * Uses CALM_DESTINATION_NAME from environment configuration.
-     * Supports optional JWT token for OAuth2SAMLBearer authentication.
      * 
      * @param jwtToken Optional JWT for user-specific authentication
      * @returns The resolved HttpDestination
@@ -95,8 +94,7 @@ export class DestinationService {
     }
 
     private getJWT(): string | undefined {
-        // In a real application, this would extract JWT from the current request
-        // For technical user scenario, this might not be needed
+        // JWT should be coming from the actual request, can only be assigned via .env for early development testing
         return process.env.USER_JWT || undefined;
     }
 
