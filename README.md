@@ -1,6 +1,6 @@
 # SAP Cloud ALM MCP Server
 
-Project discontinued, if you are looking for an CALM MCP Server:
+Project discontinued, if you are looking for a CALM MCP Server:
 
 **https://github.com/consetto/calmcp**
 
